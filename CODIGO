@@ -11,11 +11,10 @@ LIST P=16F887
     DIG0
     DIG1
     CONT_INT
-    
+    DEL1
+    DEL2
     
     ENDC
-    
-    
     
     ORG 0X00
     GOTO INICIO
@@ -56,17 +55,7 @@ LIST P=16F887
    CLRF PORTB
    CLRF PORTC
    
-   BCF STATUS,RP1
-   BSF STATUS,RP0
-   
-   ;solo para timer por ahora
-   BCF OPTION_REG, 5       
-   BCF OPTION_REG, 3       
-   BSF OPTION_REG, 2       
-   BCF OPTION_REG, 1
-   BCF OPTION_REG, 0
-
-  ; Setear en 99
+    ; Setear en 99
    CALL RESET_99
    CLRF DIG_ACTUAL
    MOVLW .2
@@ -80,10 +69,71 @@ LIST P=16F887
    BSF INTCON, GIE         
 
    
+   BCF STATUS,RP1
+   BSF STATUS,RP0
+   
+   ;solo para timer por ahora
+   BCF OPTION_REG, 5       
+   BCF OPTION_REG, 3       
+   BSF OPTION_REG, 2       
+   BCF OPTION_REG, 1
+   BCF OPTION_REG, 0
+   
    
    BUCLE_PRINCIPAL
-     GOTO BUCLE_PRINCIPAL
+    BTFSS PORTE,1
+    GOTO FIN_JERINGA
+    
+    CALL MOTOR_ON
+    CALL GIRO_AVANCE
+    CALL GENERAR_PASO
+    
+    GOTO BUCLE_PRINCIPAL
+    
+    FIN_JERINGA
+    CALL MOTOR_OFF
+    ;aca encender buzzer
+    GOTO BUCLE_PRINCIPAL
      
+    
+   ;MOTOR/DRIVER
+   ;habilito/deshabilito el driver
+   MOTOR_ON
+   BCF PORTB,3 
+   RETURN
+   
+   MOTOR_OFF
+   BSF PORTB,3
+   
+   GIRO_AVANCE
+   BSF PORTB,2
+   RETURN
+   
+   GIRO_RETROCESO
+   BCF PORTB, 2        
+   RETURN
+   
+   GENERAR_PASO
+   BSF PORTB, 1        
+   NOP                 
+   NOP
+   BCF PORTB, 1        
+   CALL RETARDO_PRUEBA 
+   RETURN
+   
+   RETARDO_PRUEBA
+   MOVLW .13
+   MOVWF DEL1
+   LOOP_DEMO_EXT
+   MOVLW .250
+   MOVWF DEL2
+   LOOP_DEMO_INT
+   DECFSZ DEL2, F
+   GOTO LOOP_DEMO_INT
+   DECFSZ DEL1, F
+   GOTO LOOP_DEMO_EXT
+   RETURN
+   
    ;Interrupcion
   
    ISR
@@ -150,6 +200,7 @@ SIG_DISP
     RETURN
     
   RESET_99
+  ;hacer que el motor gire antihorario?
     MOVLW .9
     MOVWF DIG0             
     MOVWF DIG1              
