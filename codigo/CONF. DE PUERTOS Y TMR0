@@ -21,23 +21,6 @@ LIST P=16F887
     GOTO INICIO
     ORG 0X04
     GOTO ISR
-    HABILITACION_DISPLAY
-    ADDWF PCL,F
-    RETLW b'00000001'  
-    RETLW b'00000010' 
-    
-TABLA_DISP
-    ADDWF PCL,F
-    RETLW 0xC0 ;0
-    RETLW 0xF9 ;1
-    RETLW 0xA4 ;2
-    RETLW 0xB0 ;3
-    RETLW 0x99 ;4
-    RETLW 0x92 ;5
-    RETLW 0x82 ;6
-    RETLW 0xF8 ;7
-    RETLW 0x80 ;8
-    RETLW 0x90 ;9
 
    ;Configuracion de puertos
    INICIO
@@ -71,6 +54,31 @@ TABLA_DISP
    
    CLRF PORTD
    CLRF PORTB
+   CLRF PORTC
+   
+   BCF STATUS,RP1
+   BSF STATUS,RP0
+   
+   ;solo para timer por ahora
+   BCF OPTION_REG, 5       
+   BCF OPTION_REG, 3       
+   BSF OPTION_REG, 2       
+   BCF OPTION_REG, 1
+   BCF OPTION_REG, 0
+
+  ; Setear en 99
+   CALL RESET_99
+   CLRF DIG_ACTUAL
+   MOVLW .2
+   MOVWF CONT_INT
+   MOVLW .100
+   MOVWF TMR0
+
+   
+   BCF INTCON, T0IF        
+   BSF INTCON, T0IE        
+   BSF INTCON, GIE         
+
    
    
    BUCLE_PRINCIPAL
@@ -129,7 +137,7 @@ MOSTRAR_DIG1
 HABILITAR
     MOVF DIG_ACTUAL, W
     CALL HABILITACION_DISPLAY
-    MOVWF PORTC ;PODRIAMOS CAMBIARLO
+    MOVWF PORTC ;capaz hay que poner iorwf
   
 SIG_DISP
     INCF DIG_ACTUAL, F
@@ -143,8 +151,8 @@ SIG_DISP
     
   RESET_99
     MOVLW .9
-    MOVWF DIG0              ; Unidades = 9
-    MOVWF DIG1              ; Decenas = 9
+    MOVWF DIG0             
+    MOVWF DIG1              
     RETURN
       
     
@@ -157,4 +165,24 @@ FIN_ISR
     SWAPF W_TEMP, F
     SWAPF W_TEMP, W
     RETFIE
+    
+    
+HABILITACION_DISPLAY
+    ADDWF PCL,F
+    RETLW b'00000001'  
+    RETLW b'00000010' 
+    
+TABLA_DISP
+    ADDWF PCL,F
+    RETLW 0xC0 ;0
+    RETLW 0xF9 ;1
+    RETLW 0xA4 ;2
+    RETLW 0xB0 ;3
+    RETLW 0x99 ;4
+    RETLW 0x92 ;5
+    RETLW 0x82 ;6
+    RETLW 0xF8 ;7
+    RETLW 0x80 ;8
+    RETLW 0x90 ;9
+    
 END
