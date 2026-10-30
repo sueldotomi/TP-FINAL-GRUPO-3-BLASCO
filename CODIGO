@@ -47,6 +47,16 @@ LIST P=16F887
    
    BSF TRISE,0
    BSF TRISE,1
+
+   BCF STATUS,RP1
+   BSF STATUS,RP0
+   
+   ;solo para timer por ahora
+   BCF OPTION_REG, 5       
+   BCF OPTION_REG, 3       
+   BSF OPTION_REG, 2       
+   BCF OPTION_REG, 1
+   BCF OPTION_REG, 0
    
    BCF STATUS,RP1
    BCF STATUS,RP0
@@ -67,17 +77,6 @@ LIST P=16F887
    BCF INTCON, T0IF        
    BSF INTCON, T0IE        
    BSF INTCON, GIE         
-
-   
-   BCF STATUS,RP1
-   BSF STATUS,RP0
-   
-   ;solo para timer por ahora
-   BCF OPTION_REG, 5       
-   BCF OPTION_REG, 3       
-   BSF OPTION_REG, 2       
-   BCF OPTION_REG, 1
-   BCF OPTION_REG, 0
    
    
    BUCLE_PRINCIPAL
