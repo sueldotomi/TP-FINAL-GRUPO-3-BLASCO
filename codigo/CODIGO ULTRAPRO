@@ -1,0 +1,533 @@
+LIST P=16F887
+    #include <p16f887.inc>
+
+    __CONFIG _CONFIG1, _XT_OSC & _WDTE_OFF & _PWRTE_ON & _MCLRE_ON & _CP_OFF & _CPD_OFF & _BOREN_OFF & _IESO_OFF & _FCMEN_OFF & _LVP_OFF
+    __CONFIG _CONFIG2, _BOR4V_BOR40V & _WRT_OFF
+
+;----------------------------
+; VARIABLES
+;----------------------------
+    CBLOCK 0X70
+    W_TEMP
+    STATUS_TEMP
+    DIG_ACTUAL
+    DIG0                
+    DIG1                
+    CONT_INT
+    DEL1
+    DEL2
+    ESTADO              
+    RX_DATO             
+    CADENA_RX4          
+    PTR_BUFF            
+    RET_CAUDAL    
+    CONT_TX
+    ENDC
+
+    ORG 0X00
+    GOTO INICIO
+    ORG 0X04
+    GOTO ISR
+
+;----------------------------
+; TABLAS (Cátodo Común)
+;----------------------------
+HABILITACION_DISPLAY
+    ADDWF PCL,F
+    RETLW b'00000001'
+    RETLW b'00000010'
+
+TABLA_DISP
+    ADDWF PCL,F
+    RETLW 0x3F ;0
+    RETLW 0x06 ;1
+    RETLW 0x5B ;2
+    RETLW 0x4F ;3
+    RETLW 0x66 ;4
+    RETLW 0x6D ;5
+    RETLW 0x7D ;6
+    RETLW 0x07 ;7
+    RETLW 0x7F ;8
+    RETLW 0x6F ;9
+
+;----------------------------
+; CONFIGURACION
+;----------------------------
+INICIO
+    BSF STATUS,RP1
+    BSF STATUS,RP0          
+
+    MOVLW 0X01
+    MOVWF ANSEL             
+    MOVLW 0X00
+    MOVWF ANSELH
+
+    BCF STATUS,RP1
+    BSF STATUS,RP0          
+
+    MOVLW B'00000001'
+    MOVWF TRISA
+
+    MOVLW B'00000001'
+    MOVWF TRISB
+
+    MOVLW B'11000000'
+    MOVWF TRISC
+
+    CLRF TRISD
+
+    BSF TRISE,1             
+
+    ; Timer0 
+    BCF OPTION_REG,5
+    BCF OPTION_REG,3
+    BSF OPTION_REG,2
+    BCF OPTION_REG,1
+    BCF OPTION_REG,0
+
+    ; UART (9600 bps a 4MHz)
+    MOVLW .25
+    MOVWF SPBRG
+    BSF TXSTA,BRGH
+    BCF TXSTA,SYNC
+    BSF TXSTA,TXEN
+    BSF PIE1,RCIE
+
+    ; ADC
+    CLRF ADCON1
+
+    BCF STATUS,RP1
+    BCF STATUS,RP0          
+
+    CLRF PORTD
+    CLRF PORTB
+    CLRF PORTC
+    BSF PORTB,3             ; Deshabilita motor al inicio (Enable=1)
+    
+    ; UART
+    BSF RCSTA,SPEN
+    BSF RCSTA,CREN
+
+    ; ADC
+    MOVLW B'01000001'
+    MOVWF ADCON0
+    
+    ; Conf. general
+    CLRF ESTADO
+    CLRF CONT_TX
+    
+    CALL RESET_10
+    CLRF DIG_ACTUAL
+    MOVLW .2
+    MOVWF CONT_INT
+    MOVLW .100
+    MOVWF TMR0
+    
+    ; Habilitación de ISR
+    BCF INTCON,T0IF
+    BSF INTCON,T0IE
+    BSF INTCON,PEIE
+    BSF INTCON,GIE
+
+;---------------------------------
+; PROGRAMA PRINCIPAL
+;---------------------------------
+BUCLE_PRINCIPAL
+    CALL LEER_Y_ESCALAR_ADC
+
+    INCF CONT_TX, F
+    MOVLW .30                 
+    SUBWF CONT_TX, W
+    BTFSS STATUS, Z
+    GOTO EVALUAR_ESTADOS
+    
+    CLRF CONT_TX
+    CALL ENVIAR_TELEMETRIA
+
+EVALUAR_ESTADOS
+    MOVF ESTADO, W            
+    BTFSC STATUS, Z           ; ESTADO == 0 (Parado)
+    GOTO PARADO
+
+    SUBLW .1                  ; ESTADO == 1 (Infundiendo)
+    BTFSC STATUS, Z
+    GOTO AVANZANDO
+
+    MOVF ESTADO, W            
+    SUBLW .2                  ; ESTADO == 2 (Rebobinando)
+    BTFSC STATUS, Z
+    GOTO RETROCESO
+
+    GOTO BUCLE_PRINCIPAL
+
+;--- ACCIONES DE CADA ESTADO ---
+
+PARADO
+    CALL MOTOR_OFF
+    GOTO BUCLE_PRINCIPAL
+
+AVANZANDO
+    BTFSS PORTE, 1            ; Fin de jeringa mecánico (RE1 == 0)
+    GOTO FIN_JERINGA
+    
+    CALL MOTOR_ON
+    CALL GIRO_AVANCE
+    CALL GENERAR_PASO
+    GOTO BUCLE_PRINCIPAL
+    
+RETROCESO
+    ;  Si ya regresó al inicio (10 mL / ADRESH >= 225), frena solo
+    MOVF ADRESH, W
+    SUBLW .225
+    BTFSS STATUS, C
+    GOTO FIN_REBOBINADO
+
+    CALL MOTOR_ON
+    CALL GIRO_RETROCESO
+    CALL GENERAR_PASO
+    GOTO BUCLE_PRINCIPAL
+
+FIN_REBOBINADO
+    CALL MOTOR_OFF
+    CALL GIRO_AVANCE
+    CLRF ESTADO               
+    GOTO BUCLE_PRINCIPAL
+
+FIN_JERINGA
+    CALL MOTOR_OFF
+    CLRF ESTADO               
+    GOTO BUCLE_PRINCIPAL
+
+;---------------------------
+; TELEMETRÍA UART 
+;---------------------------
+ENVIAR_TELEMETRIA
+    MOVF DIG1, W
+    ADDLW 0x30          
+    CALL TRANSMITIR_CHAR
+
+    MOVF DIG0, W
+    ADDLW 0x30          
+    CALL TRANSMITIR_CHAR
+
+    MOVLW 0x0D          ; Retorno de carro '\r'
+    CALL TRANSMITIR_CHAR
+    MOVLW 0x0A          ; Salto de línea '\n'
+    CALL TRANSMITIR_CHAR
+    RETURN
+
+TRANSMITIR_CHAR
+    BSF STATUS, RP0     
+ESPERA_TX
+    BTFSS TXSTA, TRMT   
+    GOTO ESPERA_TX      
+    BCF STATUS, RP0     
+    MOVWF TXREG         
+    RETURN
+
+;------------------------
+; LECTURA DEL ADC 
+;------------------------
+LEER_Y_ESCALAR_ADC
+    MOVLW .8
+    MOVWF DEL2
+ESPERA_ADQ
+    DECFSZ DEL2,F
+    GOTO ESPERA_ADQ         
+
+    BSF ADCON0,GO_DONE      
+
+ESPERAR_ADC
+    BTFSC ADCON0,GO_DONE    
+    GOTO ESPERAR_ADC
+
+    MOVF ADRESH,W           
+
+    SUBLW .225              
+    BTFSS STATUS,C
+    GOTO CARGAR_10_ML
+
+    CLRF DIG1              
+
+    MOVF ADRESH,W
+    SUBLW .203
+    BTFSS STATUS,C
+    GOTO CARGAR_09_ML
+
+    MOVF ADRESH,W
+    SUBLW .180
+    BTFSS STATUS,C
+    GOTO CARGAR_08_ML
+
+    MOVF ADRESH,W
+    SUBLW .158
+    BTFSS STATUS,C
+    GOTO CARGAR_07_ML
+
+    MOVF ADRESH,W
+    SUBLW .135
+    BTFSS STATUS,C
+    GOTO CARGAR_06_ML
+
+    MOVF ADRESH,W
+    SUBLW .113
+    BTFSS STATUS,C
+    GOTO CARGAR_05_ML
+
+    MOVF ADRESH,W
+    SUBLW .90
+    BTFSS STATUS,C
+    GOTO CARGAR_04_ML
+
+    MOVF ADRESH,W
+    SUBLW .68
+    BTFSS STATUS,C
+    GOTO CARGAR_03_ML
+
+    MOVF ADRESH,W
+    SUBLW .45
+    BTFSS STATUS,C
+    GOTO CARGAR_02_ML
+
+    MOVF ADRESH,W
+    SUBLW .23
+    BTFSS STATUS,C
+    GOTO CARGAR_01_ML
+
+    CLRF DIG0
+    RETURN
+
+CARGAR_10_ML
+    MOVLW .1
+    MOVWF DIG1
+    CLRF DIG0              
+    RETURN
+
+CARGAR_09_ML
+    MOVLW .9
+    MOVWF DIG0
+    RETURN
+
+CARGAR_08_ML
+    MOVLW .8
+    MOVWF DIG0
+    RETURN
+
+CARGAR_07_ML
+    MOVLW .7
+    MOVWF DIG0
+    RETURN
+
+CARGAR_06_ML
+    MOVLW .6
+    MOVWF DIG0
+    RETURN
+
+CARGAR_05_ML
+    MOVLW .5
+    MOVWF DIG0
+    RETURN
+
+CARGAR_04_ML
+    MOVLW .4
+    MOVWF DIG0
+    RETURN
+
+CARGAR_03_ML
+    MOVLW .3
+    MOVWF DIG0
+    RETURN
+
+CARGAR_02_ML
+    MOVLW .2
+    MOVWF DIG0
+    RETURN
+
+CARGAR_01_ML
+    MOVLW .1
+    MOVWF DIG0
+    RETURN
+
+;---------------------
+; MOTOR / DRIVER
+;---------------------
+MOTOR_ON
+    BCF PORTB,3
+    RETURN
+
+MOTOR_OFF
+    BSF PORTB,3
+    RETURN
+
+GIRO_AVANCE
+    BSF PORTB,2
+    RETURN
+
+GIRO_RETROCESO
+    BCF PORTB,2
+    RETURN
+
+GENERAR_PASO
+    BSF PORTB,1          
+    NOP
+    NOP
+    BCF PORTB,1            
+    
+    MOVLW .200
+    MOVWF DEL1
+PAUSA_PASO
+    DECFSZ DEL1, F
+    GOTO PAUSA_PASO
+    RETURN
+
+;----------------------------
+; INTERRUPCIONES (ISR)
+;----------------------------
+ISR
+    MOVWF W_TEMP
+    SWAPF STATUS,W
+    MOVWF STATUS_TEMP
+    BCF STATUS, RP0
+    BCF STATUS, RP1     
+
+    BTFSC INTCON,T0IF
+    GOTO ISR_TMR0
+
+    BTFSC PIR1,RCIF        
+    GOTO ISR_RX
+
+    GOTO FIN_ISR
+
+ISR_TMR0
+    BCF INTCON,T0IF
+    MOVLW .100
+    MOVWF TMR0
+
+    CALL REFRES_DISP
+
+    DECFSZ CONT_INT,F
+    GOTO FIN_ISR
+    MOVLW .2
+    MOVWF CONT_INT
+    GOTO FIN_ISR
+
+ISR_RX
+    BTFSS RCSTA,OERR        
+    GOTO RX_LEER
+    BCF RCSTA,CREN          
+    BSF RCSTA,CREN
+    GOTO FIN_ISR
+
+RX_LEER
+    MOVF RCREG,W            
+    MOVWF RX_DATO
+    MOVWF TXREG             ; Eco en la terminal
+
+    ; 'S' o 's'
+    MOVLW 'S'                
+    SUBWF RX_DATO,W
+    BTFSC STATUS,Z
+    GOTO RX_START
+
+    MOVLW 's'                
+    SUBWF RX_DATO,W
+    BTFSC STATUS,Z
+    GOTO RX_START
+
+    ; 'P' o 'p'
+    MOVLW 'P'               
+    SUBWF RX_DATO,W
+    BTFSC STATUS,Z
+    GOTO RX_PAUSA
+
+    MOVLW 'p'               
+    SUBWF RX_DATO,W
+    BTFSC STATUS,Z
+    GOTO RX_PAUSA
+    
+    ; 'R' o 'r'
+    MOVLW 'R'
+    SUBWF RX_DATO, W
+    BTFSC STATUS, Z
+    GOTO RX_RETROCESO
+
+    MOVLW 'r'
+    SUBWF RX_DATO, W
+    BTFSC STATUS, Z
+    GOTO RX_RETROCESO
+
+    GOTO FIN_ISR
+
+RX_START
+    MOVLW .1
+    MOVWF ESTADO
+    GOTO FIN_ISR
+
+RX_PAUSA
+    CLRF ESTADO
+    GOTO FIN_ISR
+
+RX_RETROCESO
+    MOVLW .2
+    MOVWF ESTADO
+    GOTO FIN_ISR
+
+;----------------------------
+; MULTIPLEXADO DE DISPLAYS
+;---------------------------
+REFRES_DISP
+    BCF PORTC,0
+    BCF PORTC,1
+
+    MOVF DIG_ACTUAL,W
+    BTFSC STATUS,Z
+    GOTO MOSTRAR_DIG0
+
+    GOTO MOSTRAR_DIG1
+
+MOSTRAR_DIG0
+    MOVF DIG0,W
+    CALL TABLA_DISP
+    MOVWF PORTD
+    GOTO HABILITAR
+
+MOSTRAR_DIG1
+    MOVF DIG1,W
+    CALL TABLA_DISP
+    MOVWF PORTD
+    GOTO HABILITAR
+
+HABILITAR
+    MOVF DIG_ACTUAL,W
+    CALL HABILITACION_DISPLAY
+    IORWF PORTC,F
+
+SIG_DISP
+    INCF DIG_ACTUAL,F
+    MOVLW .2
+    SUBWF DIG_ACTUAL,W
+    BTFSS STATUS,Z
+    RETURN
+
+    CLRF DIG_ACTUAL
+    RETURN
+
+RESET_10
+    MOVLW .1
+    MOVWF DIG1
+    CLRF DIG0
+    RETURN
+
+;-----------------------------
+; SALIDA DE ISR
+;------------------------------
+FIN_ISR
+    BCF STATUS, RP0
+    BCF STATUS, RP1
+    SWAPF STATUS_TEMP,W
+    MOVWF STATUS
+    SWAPF W_TEMP,F
+    SWAPF W_TEMP,W
+    RETFIE
+
+    END
