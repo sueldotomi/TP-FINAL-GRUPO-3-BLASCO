@@ -6,6 +6,7 @@ Este proyecto consiste en el desarrollo de un prototipo de bomba de infusion de 
 La PC se comunica con la bomba a través del protocolo UART serie (9600 8N1).
 
 Comandos UART Disponibles
+
 'S': Start — Inicia la infusión.
 'P': Pause — Detiene el motor e interrumpe la infusión.
 'R': Rewind — Activa el rebobinado (retroceso) hacia el origen.
