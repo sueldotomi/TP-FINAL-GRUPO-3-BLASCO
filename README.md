@@ -24,9 +24,9 @@ COMPONENTES:
 
   Sensores:
 
-    Potenciómetro tipo slider (Mapeo ADC de volumen de jeringa 0-10 mL)
+  Potenciómetro tipo slider (Mapeo ADC de volumen de jeringa 0-10 mL)
 
-    Microswitch fin de carrera (Seguridad final de jeringa)
+  Microswitch fin de carrera (Seguridad final de jeringa)
 
   Visualización Local: 2x Displays de 7 segmentos (Cátodo común) + 2x Transistores NPN
 
