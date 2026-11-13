@@ -12,12 +12,6 @@ Prueba N°2: Se probó la configuración del Timer0 y se revisó la ejecución d
 En OPTION_REG configuramos los bits relacionados con el Timer0.
 Tambien se probó las interrupciones.
 Se tiene que tener en cuenta usar BSF STATUS, RP0 para cambiar al banco 1 y poder configurar OPTION_REG, y después BCF STATUS,RP0 para volver al banco 0 y continuar con el programa.
-![Circuito en Proteus](PEGAR_URL_DE_LA_IMAGEN)Como Proteus no deja simular el A4988, se armó el circuito con L297 + L298 y el motor MOTOR-BISTEPPER. El código del motor no se modificó.
-El motor gira cuando RE1 = 1 (pulsador sin apretar, con pull-up a +5V).
-Al apretar el pulsador, RE1 pasa a 0, el código salta a FIN_JERINGA, pone RB3 = 1 y el motor se frena.
-El ENABLE del A4988 es activo en bajo (RB3 = 0 habilita) y el del L297 es activo en alto. Por eso, solo en la simulación, se puso una compuerta NOT entre RB3 y el pin ENABLE del L297. En la placa real con el A4988 no hace falta.
-
-<img width="1120" height="679" alt="Image" src="https://github.com/user-attachments/assets/029d7bf9-f563-49de-a0c0-856fc995993a" />
 
 Prueba N°3: Como Proteus no deja simular el A4988, se armó el circuito con L297 + L298 y el motor MOTOR-BISTEPPER. El código del motor no se modificó.
 El motor gira cuando RE1 = 1 (pulsador sin apretar, con pull-up a +5V).
