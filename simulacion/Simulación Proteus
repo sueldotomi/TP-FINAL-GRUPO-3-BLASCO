@@ -20,8 +20,7 @@ El ENABLE del A4988 es activo en bajo (RB3 = 0 habilita) y el del L297 es activo
 
 Prueba N°4: Multiplexado funciona correctamente; se pudo ver RC0 Y RC1 como alternan cada uno dura unos 5ms en alto, y el período completo es de unos 10ms. Es lo que esperábamos ajustados con el TIMR0= 100, preescaler 1:32 y 4MHZ.
 
-Prueba N°5: Image
-Se verificó la conección UART, colocando "S" y "P" en la Virtual Terminal con la simulación corriendo:
+Prueba N°5: Se verificó la conección UART, colocando "S" y "P" en la Virtual Terminal con la simulación corriendo:
 S “Motor girando”
 P “Motor en pausa”
 
@@ -30,7 +29,7 @@ Driver arranca apagado: al iniciar la simulación sin escribir nada el motor que
 El motor quedó parado al arrancar.
 Fin de Jeringa el RE1 frena el motor solo (Falta confirmar).
 
-Prueba N°7:Image Se probó el escalado de la lectura del ADC. El código lee ADRESH (0 a 255, con referencia VDD = 5 V) y lo escala a un volumen de 0 a 10 mL mediante 10 umbrales (23, 45, 68, 90, 113, 135, 158, 180, 203, 225). Al variar RV1 en la simulación, los displays cambian por escalones de 00 a 10, tanto al subir como al bajar.
+Prueba N°7: Se probó el escalado de la lectura del ADC. El código lee ADRESH (0 a 255, con referencia VDD = 5 V) y lo escala a un volumen de 0 a 10 mL mediante 10 umbrales (23, 45, 68, 90, 113, 135, 158, 180, 203, 225). Al variar RV1 en la simulación, los displays cambian por escalones de 00 a 10, tanto al subir como al bajar.
 100 % (jeringa llena): displays en 10 (decenas = 1, unidades = 0)
 50 % (jeringa a la mitad): displays en 05 (decenas = 0, unidades = 5)
 0 % (jeringa vacía): displays en 00
@@ -46,9 +45,7 @@ SUBLW .68 → 3 mL
 SUBLW .45 → 2 mL
 SUBLW .23 → 1 mL
 
-Prueba N°8: Image
-Comunicación UART funcionando.
-En esta imagen podemos ver que se muestra 08 en la virtual terminal, eso significa que la jeringa está a 8ml.
+Prueba N°8: Comunicación UART funcionando. Se puede ver que se muestra 08 en la virtual terminal, eso significa que la jeringa está a 8ml.
 
 
 
