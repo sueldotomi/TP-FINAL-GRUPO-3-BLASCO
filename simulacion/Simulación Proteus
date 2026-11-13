@@ -1,1 +1,54 @@
+Prueba N°1: Se corrigió la entrada al banco 0
+;solo para timer por ahora
+BCF OPTION_REG, 5
+BCF OPTION_REG, 3
+BSF OPTION_REG, 2
+BCF OPTION_REG, 1
+BCF OPTION_REG, 0
+
+BCF STATUS, RP0 !!!
+
+Prueba N°2: Se probó la configuración del Timer0 y se revisó la ejecución del programa en MPLAB.
+En OPTION_REG configuramos los bits relacionados con el Timer0.
+Tambien se probó las interrupciones.
+Se tiene que tener en cuenta usar BSF STATUS, RP0 para cambiar al banco 1 y poder configurar OPTION_REG, y después BCF STATUS,RP0 para volver al banco 0 y continuar con el programa.
+
+Prueba N°3: Como Proteus no deja simular el A4988, se armó el circuito con L297 + L298 y el motor MOTOR-BISTEPPER. El código del motor no se modificó.
+El motor gira cuando RE1 = 1 (pulsador sin apretar, con pull-up a +5V).
+Al apretar el pulsador, RE1 pasa a 0, el código salta a FIN_JERINGA, pone RB3 = 1 y el motor se frena.
+El ENABLE del A4988 es activo en bajo (RB3 = 0 habilita) y el del L297 es activo en alto. Por eso, solo en la simulación, se puso una compuerta NOT entre RB3 y el pin ENABLE del L297. En la placa real con el A4988 no hace falta.
+
+Prueba N°4: Multiplexado funciona correctamente; se pudo ver RC0 Y RC1 como alternan cada uno dura unos 5ms en alto, y el período completo es de unos 10ms. Es lo que esperábamos ajustados con el TIMR0= 100, preescaler 1:32 y 4MHZ.
+
+Prueba N°5: Image
+Se verificó la conección UART, colocando "S" y "P" en la Virtual Terminal con la simulación corriendo:
+S “Motor girando”
+P “Motor en pausa”
+
+Prueba N°6: UART 9600 a 4Mhz, recibe por interrupción y hace eco.
+Driver arranca apagado: al iniciar la simulación sin escribir nada el motor queda parado y la sonda de ENABLE antes del NOT marca 1.
+El motor quedó parado al arrancar.
+Fin de Jeringa el RE1 frena el motor solo (Falta confirmar).
+
+Prueba N°7:Image Se probó el escalado de la lectura del ADC. El código lee ADRESH (0 a 255, con referencia VDD = 5 V) y lo escala a un volumen de 0 a 10 mL mediante 10 umbrales (23, 45, 68, 90, 113, 135, 158, 180, 203, 225). Al variar RV1 en la simulación, los displays cambian por escalones de 00 a 10, tanto al subir como al bajar.
+100 % (jeringa llena): displays en 10 (decenas = 1, unidades = 0)
+50 % (jeringa a la mitad): displays en 05 (decenas = 0, unidades = 5)
+0 % (jeringa vacía): displays en 00
+LEER_Y_ESCALAR_ADC
+SUBLW .225 → 10 mL
+SUBLW .203 → 9 mL
+SUBLW .180 → 8 mL
+SUBLW .158 → 7 mL
+SUBLW .135 → 6 mL
+SUBLW .113 → 5 mL
+SUBLW .90 → 4 mL
+SUBLW .68 → 3 mL
+SUBLW .45 → 2 mL
+SUBLW .23 → 1 mL
+
+Prueba N°8: Image
+Comunicación UART funcionando.
+En esta imagen podemos ver que se muestra 08 en la virtual terminal, eso significa que la jeringa está a 8ml.
+
+
 
