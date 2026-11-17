@@ -1,7 +1,7 @@
 # TP-FINAL-GRUPO-3-BLASCO
 BOMBA DE INFUSION AUTOMATIZADA CON MONITOREO DE SEGURIDAD
 
-Este proyecto consiste en el desarrollo de un prototipo de bomba de infusion de medicamentos con jeringa controlada mediante el microcontrolador PIC16F887. El sistema permite el control lineal de dosificacion de fluidos, seguimiento de volumen en tiempo real mediante un potenciometro deslizable (ADC), interfaz local con displays multiplexados y control/monitoreo remoto via comunicacion serie (UART).
+Este proyecto consiste en el desarrollo de un prototipo de bomba de infusion de medicamentos controlada mediante el microcontrolador PIC16F887. El sistema permite el control lineal de dosificacion de fluidos, seguimiento de volumen en tiempo real mediante un potenciometro deslizable (ADC), interfaz local con displays multiplexados y control/monitoreo remoto via comunicacion serie (UART).
 
 La PC se comunica con la bomba a través del protocolo UART serie (9600 8N1).
 
