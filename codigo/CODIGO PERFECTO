@@ -379,7 +379,7 @@ GENERAR_PASO
     NOP
     BCF PORTB,1
 
-    MOVLW .20               
+    MOVLW .10               
     MOVWF DEL2
 PAUSA_PASO_EXT
     MOVLW .200
