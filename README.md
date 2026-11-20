@@ -37,3 +37,11 @@ CRITERIOS DE ACEPTACIÓN (DOD)
   - Seguridad eléctrica y térmica: la etapa de potencia (12 V) y la lógica (5 V) comparten masa única con capacitores de desacople. Por su parte, el driver tiene calibrado su voltaje de referencia (0.4 V - 0.5V) y desenergiza las bobinas en estado de reposo para evitar sobrecalentamiento.
   - Cuando el motor empieza a rebobinar y se van incrementando los números en los displays, una vez llegado a los 10mL el motor se detiene automaticamente.
   - El rebobinado solo ocurre cuando el potenciometro mide un valor distinto a 10.
+
+VIDEO TRABAJO EN FUNCIONAMIENTO
+
+https://github.com/user-attachments/assets/6afbe717-3dff-459e-a1f6-71b4afc6c544
+
+
+
+
